@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.cs
+*.exe
+*.dll
+*.pdb
+*.log
