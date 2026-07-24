@@ -1,0 +1,7 @@
+# Habilita o botão "Sponsor" no topo do repositório.
+# A linha `github:` só renderiza depois que você concluir o cadastro em
+# https://github.com/sponsors (exige conta bancária/identidade — passo seu).
+# `custom:` mostra links extras imediatamente (loja/landing).
+github: [agorapassadoagora-debug]
+custom:
+  - "https://promoflix.site"
