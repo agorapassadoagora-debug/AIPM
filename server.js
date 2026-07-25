@@ -187,12 +187,14 @@ function winQuery(args) {
 const READ_TOOLS = [
   {
     name: 'health_check',
+    annotations: { title: 'Check AI Process Manager status' },
     description:
       'Ping the AI Process Manager backend. Returns version, API URL, and whether the local service is reachable. Call this first in a new session.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'check_process',
+    annotations: { title: 'Check if a process is running' },
     description:
       'Check if a process is running on the user\'s Windows machine — no screenshot. Filter by executable name fragment (e.g. "python", "ffmpeg") and/or window title (e.g. "RENDER VIDEO 02"). Returns PID, CPU%, RAM, title, command line, start time. Command lines are truncated to 120 chars unless full_command_line=true. Results are capped at 10 matches, windowed processes first.',
     inputSchema: {
@@ -209,6 +211,7 @@ const READ_TOOLS = [
   },
   {
     name: 'list_processes',
+    annotations: { title: 'List running processes' },
     description:
       'List running processes sorted by CPU. Use "top" to limit (default 25, max 200). Prefer check_process when searching for one process. Command lines truncated unless full_command_line=true.',
     inputSchema: {
@@ -221,24 +224,28 @@ const READ_TOOLS = [
   },
   {
     name: 'list_windows',
+    annotations: { title: 'List open windows' },
     description:
       'List open desktop windows: title, process, minimized/maximized state, position, Z-order, and which has focus. Replaces screenshots for "what is open".',
     inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'get_system_status',
+    annotations: { title: 'Get system status (CPU, RAM, GPU, disk)' },
     description:
       'Machine snapshot: CPU%, RAM used/total, GPU name and usage, disk free space per drive, network, uptime, active displays.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'get_taskbar',
+    annotations: { title: 'Show taskbar apps' },
     description:
       'Human view of the taskbar: pinned apps and running apps grouped with window titles.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'read_window',
+    annotations: { title: 'Read text from a window' },
     description:
       'Read TEXT from inside a window via UI Automation — no screenshot. Works with consoles (cmd, PowerShell, Windows Terminal), editors, and most native apps. Typical use: read render progress from a console ("frame 4812/5000"). Identify the window by title_contains or hwnd from list_windows.',
     inputSchema: {
@@ -252,20 +259,38 @@ const READ_TOOLS = [
   },
   {
     name: 'get_ui_tree',
+    annotations: { title: "Get a window's UI element tree" },
     description:
-      'UI Automation tree of a window (buttons, fields, text, states) — like a web accessibility snapshot for native Windows apps. Use depth (default 4, max 8) and max_nodes (default 200) to control token cost.',
+      'UI Automation tree of a window (roles, names, states) — the accessibility snapshot of a native Windows app. ' +
+      'depth: default 4, max 30. max_nodes: default 200, max 1000 — max_nodes is the cost brake, NOT depth. ' +
+      'Win32 apps expose content within 4-6 levels. Chromium/Electron apps (VS Code, Slack, Discord, Claude Desktop, Teams) ' +
+      'bury real content under ~10 levels of Pane/Group wrappers: at low depth you get only empty Panes and conclude, wrongly, ' +
+      'that the window is empty. Measured on Claude Desktop: depth=8 -> 15 useless nodes; depth=17 -> 115 nodes, 87 of them named (~8 KB) — ' +
+      'the tree saturates at 17. So for Chromium/Electron ask for depth=15-20 and cap cost with max_nodes. ' +
+      'The response reports depth, max_nodes, nodes, depth_reached and truncated; when truncated=true the tree was cut ' +
+      '(read next_action) and you should repeat with a higher depth and/or max_nodes before concluding anything about the window. ' +
+      'For finding a clickable target prefer ui_find (already filtered to interactive elements).',
     inputSchema: {
       type: 'object',
       properties: {
         title_contains: { type: 'string', description: 'Window title fragment' },
         hwnd: { type: 'number', description: 'Exact window handle' },
-        depth: { type: 'number', description: 'Max tree depth (default 4, max 8)' },
-        max_nodes: { type: 'number', description: 'Max nodes (default 200)' },
+        depth: {
+          type: 'number',
+          description:
+            'Max tree depth (default 4, max 30). 4-6 for native Win32; 15-20 for Chromium/Electron apps, whose content sits under ~10 wrapper levels.',
+        },
+        max_nodes: {
+          type: 'number',
+          description:
+            'Max nodes returned (default 200, max 1000). This is the token-cost brake — raise depth freely and cap cost here.',
+        },
       },
     },
   },
   {
     name: 'wait_for',
+    annotations: { title: 'Wait until a condition is met' },
     description:
       'Long-poll until a condition is met (or timeout). Replaces polling loops. Conditions: process_ended, process_started, file_stable (render/download done), file_exists, window_title_contains. Max 50s per call; if satisfied=false, call again to keep waiting.',
     inputSchema: {
@@ -283,6 +308,7 @@ const READ_TOOLS = [
   },
   {
     name: 'get_recent_events',
+    annotations: { title: 'List recent PC events' },
     description:
       'Last 24h of PC events: process_started, process_ended (with duration), window_focused, file_changed. Useful for "what happened while I was away" (e.g. when did the render finish?).',
     inputSchema: {
@@ -295,6 +321,7 @@ const READ_TOOLS = [
   },
   {
     name: 'check_file',
+    annotations: { title: 'Check a file or folder' },
     description:
       'File or folder status: exists, size, last modified, locked?, locking process. Ideal for checking if a render/export finished without opening Explorer.',
     inputSchema: {
@@ -307,8 +334,11 @@ const READ_TOOLS = [
   },
   {
     name: 'get_app_knowledge',
+    annotations: { title: 'Get learned recipes for an app' },
     description:
-      'Query what AIPM learned about an app from agent telemetry: successful (role, name) -> action recipes and common failures. Call BEFORE acting in an app. Pass process name as shown in task manager (e.g. "notepad.exe", "chrome.exe").',
+      'Query what AIPM learned locally about an app: successful (role, name) -> action recipes, plus common_failures (targets that keep failing — do not retry them). ' +
+      'Call BEFORE acting in an app. Even with known=false you may get ui_shape: the shape of the app\'s UI tree (counts, roles, depth) learned passively from earlier reads — useful cold-start map. ' +
+      'Pass the process name as shown in task manager (e.g. "notepad.exe", "chrome.exe").',
     inputSchema: {
       type: 'object',
       properties: {
@@ -319,14 +349,18 @@ const READ_TOOLS = [
   },
   {
     name: 'get_economy_stats',
+    annotations: { title: 'Get token economy statistics' },
     description:
-      'Local economy metrics: tokens and time saved by structured state vs screenshots, queries served, task/action success rates, top apps, 24h/7d trends. Use to quantify value of this approach.',
+      'Local economy metrics: tokens and time saved by structured state vs screenshots, queries served, task/action success rates, top apps, 24h/7d trends. ' +
+      'Two independent views of savings — economy_measured_by_api (measured here) and economy_reported_by_agents (self-reported): never add them together. ' +
+      'The store block states which local database the totals came from.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'get_audit_log',
+    annotations: { title: 'View API audit log' },
     description:
-      'Recent API audit log: which agents called which endpoints and when. Works even when the API is paused. For compliance and debugging agent behavior.',
+      'Recent API audit log: which agents called which endpoints and when. Works even when the API is paused. For compliance and debugging agent behavior. Secrets and typed text (api_key=, value=) are masked before being recorded.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -336,8 +370,15 @@ const READ_TOOLS = [
   },
 ];
 
+// Todas as tools de leitura carregam os mesmos hints. Object.assign ESCREVE POR CIMA
+// do objeto existente, preservando o `title` que cada tool já declarou (o title é
+// exigido pela revisão de extensão e é o que o cliente mostra ao usuário).
 READ_TOOLS.forEach((t) => {
-  t.annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
+  t.annotations = Object.assign(t.annotations || {}, {
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  });
 });
 
 const ACTION_TOOLS = [
@@ -356,7 +397,12 @@ const ACTION_TOOLS = [
         offset: { type: 'number', description: 'Pagination offset (default 0)' },
       },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      title: 'Find interactive UI elements',
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: 'ui_invoke',
@@ -371,7 +417,12 @@ const ACTION_TOOLS = [
         element_index: { type: 'number', description: 'Stable index from ui_find' },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+    annotations: {
+      title: 'Click a UI element',
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: false,
+    },
   },
   {
     name: 'ui_set_value',
@@ -388,7 +439,12 @@ const ACTION_TOOLS = [
       },
       required: ['value'],
     },
-    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+    annotations: {
+      title: 'Set the value of a UI field',
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: false,
+    },
   },
   {
     name: 'focus_window',
@@ -401,7 +457,14 @@ const ACTION_TOOLS = [
         hwnd: { type: 'number', description: 'Exact window handle' },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    // Trazer janela para frente não destrói nada e repetir dá o mesmo resultado.
+    annotations: {
+      title: 'Bring a window to the foreground',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
   },
 ];
 
@@ -424,12 +487,18 @@ const TELEMETRY_TOOLS = [
       },
       required: ['app'],
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      title: 'Report task outcome (telemetry)',
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: 'report_action_outcome',
     description:
-      'Report one UI action outcome (invoke/set_value/focus). Feeds per-app recipes in get_app_knowledge. Metadata only.',
+      'Report one UI action outcome (invoke/set_value/focus). Feeds per-app recipes in get_app_knowledge. Metadata only — never screen content or typed text. ' +
+      'Report FAILURES too (ok=false plus reason): they become common_failures and stop the next agent from repeating the same dead end.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -439,10 +508,20 @@ const TELEMETRY_TOOLS = [
         action: { type: 'string', description: 'Action performed (invoke, set_value, focus)' },
         ok: { type: 'boolean', description: 'Action succeeded?' },
         ms: { type: 'number', description: 'Action duration in ms' },
+        reason: {
+          type: 'string',
+          description:
+            'Only when ok=false. Closed vocabulary: elemento_nao_encontrado, elemento_nao_suporta_invoke, elemento_nao_suporta_set_value, campo_somente_leitura, janela_nao_encontrada, ui_timeout, acao_bloqueada, erro_uia, outro. Anything else is stored as "outro" — free text never reaches disk.',
+        },
       },
       required: ['app', 'action'],
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      title: 'Report UI action outcome (telemetry)',
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
 ];
 
@@ -638,6 +717,9 @@ async function callTool(name, args) {
       q.set('action', String(args.action));
       if (args.ok != null) q.set('ok', args.ok ? 'true' : 'false');
       if (args.ms != null) q.set('ms', String(args.ms));
+      // reason= só faz sentido com ok=false; o backend normaliza para o vocabulário
+      // fechado (texto livre vira "outro"), então repassar é seguro.
+      if (args.reason != null) q.set('reason', String(args.reason));
       const r = await apiPost('/telemetry/action?' + q.toString());
       if (r.status >= 400) return enrichApiError(r.status, r.json);
       return r.json;
