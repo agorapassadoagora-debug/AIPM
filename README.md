@@ -187,7 +187,7 @@ We publish what does **not** work yet on purpose — you should know the edges b
 
 - **Free & open (MIT):** this MCP server.
 - **Free (closed):** the `AIProcessManager.exe` backend — the sensor. Yours to run at no cost.
-- **Paid:** **ForgePilot**, the autonomous computer-use agent that drives apps end-to-end using AIPM's
+- **Paid:** **AIPM Pilot**, the autonomous computer-use agent that drives apps end-to-end using AIPM's
   structured perception. See [promoflix.site](https://promoflix.site).
 
 ## Support the project
@@ -196,4 +196,4 @@ If AIPM saves you tokens, consider [sponsoring](https://github.com/sponsors/agor
 
 ## License
 
-[MIT](LICENSE) for the MCP server. The backend and ForgePilot are separate products.
+[MIT](LICENSE) for the MCP server. The backend and AIPM Pilot are separate products.
