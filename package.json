@@ -1,5 +1,5 @@
 {
-  "name": "@agorapassadoagora-debug/aipm-mcp",
+  "name": "aipm-mcp-server",
   "version": "0.5.0",
   "description": "MCP server for AI Process Manager: structured Windows state for AI agents (processes, windows, UI Automation) — no screenshots",
   "license": "MIT",
