@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.agorapassadoagora-debug/aipm",
   "title": "AI Process Manager (AIPM)",
-  "description": "Structured Windows state for AI agents — processes, windows, console text, and UI Automation trees. ~95% fewer perception tokens vs screenshots. Read-only by default.",
+  "description": "Structured Windows state for AI agents - processes, windows, console text and UI Automation trees, as compact JSON over loopback. ~94-98% fewer perception tokens per action than screenshots, measured. Read-only by default; action tier is opt-in per application. Nothing leaves the machine.",
   "version": "0.5.0",
   "repository": {
     "url": "https://github.com/agorapassadoagora-debug/AIPM",

@@ -1,14 +1,21 @@
 {
   "name": "aipm-mcp-server",
   "version": "0.5.0",
-  "description": "MCP server for AI Process Manager: structured Windows state for AI agents (processes, windows, UI Automation) — no screenshots",
+  "description": "MCP server for AI Process Manager: structured Windows state for AI agents (processes, windows, console text, UI Automation trees) instead of screenshots. Zero dependencies, read-only by default.",
   "license": "MIT",
   "author": "AI Process Manager contributors",
   "repository": {
     "type": "git",
     "url": "https://github.com/agorapassadoagora-debug/AIPM.git"
   },
-  "keywords": ["mcp", "model-context-protocol", "windows", "computer-use", "ui-automation", "agent"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "windows",
+    "computer-use",
+    "ui-automation",
+    "agent"
+  ],
   "engines": {
     "node": ">=14"
   },
@@ -16,6 +23,10 @@
   "bin": {
     "aipm-mcp": "./server.js"
   },
-  "files": ["server.js", "version.js", "README.md"],
+  "files": [
+    "server.js",
+    "version.js",
+    "README.md"
+  ],
   "mcpName": "io.github.agorapassadoagora-debug/aipm"
 }
