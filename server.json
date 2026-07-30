@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.aipm-engine/aipm",
+  "name": "io.github.agorapassadoagora-debug/aipm",
   "title": "AI Process Manager (AIPM)",
   "description": "Structured Windows state for AI agents: processes, windows, UI trees. No screenshots.",
   "version": "0.5.0",
